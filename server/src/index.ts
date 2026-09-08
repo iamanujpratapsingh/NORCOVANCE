@@ -395,7 +395,7 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
 if (config.isProduction) {
   const clientDist = path.resolve(process.cwd(), '../client/dist');
   app.use(express.static(clientDist));
-  app.get('(.*)', (_req, res) => res.sendFile(path.join(clientDist, 'index.html')));
+  app.use((_req, res) => res.sendFile(path.join(clientDist, 'index.html')));
 }
 
 app.listen(config.port, () => console.log(`FieldVerify API listening on http://localhost:${config.port}`));
