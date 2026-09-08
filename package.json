@@ -1,0 +1,20 @@
+{
+  "name": "fieldverify",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix server && npm run build --prefix client",
+    "seed": "npm run seed --prefix server",
+    "render:build": "npm install --prefix server && npm install --prefix client && npm run build --prefix server && npm run build --prefix client",
+    "render:start": "npm run start --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prisma": "^6.19.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3"
+  }
+}

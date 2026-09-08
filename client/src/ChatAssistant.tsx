@@ -1,0 +1,23 @@
+import { useEffect, useState } from 'react';
+import { Bot, ChevronDown, LoaderCircle, MessageCircle, RotateCcw, Send, ShieldCheck, UserRound, X } from 'lucide-react';
+import { request, type Role } from './auth';
+
+type ChatMessage = { sender: 'USER' | 'ASSISTANT'; content: string; timestamp: string };
+const operatorSuggestions = ['How do I create a field test?', 'Why is my test pending?', 'Show my recent test statuses', 'What does inconclusive mean?'];
+const supervisorSuggestions = ['Show pending reviews', "Summarize today's activity", 'Show open reports', 'Explain today’s test statistics'];
+
+export function ChatAssistant({ role, userId, testId, onClose }: { role: Role; userId: string; testId?: string; onClose: () => void }) {
+  const isSupervisor = role === 'SUPERVISOR';
+  const [messages, setMessages] = useState<ChatMessage[]>([{ sender: 'ASSISTANT', content: isSupervisor ? 'I am Supervisor Copilot. I can summarize authorized records, reviews, reports, analytics, and audit activity.' : 'I am Field Assistant. I can help with the FieldVerify workflow and your own authorized records.', timestamp: new Date().toISOString() }]);
+  const [input, setInput] = useState('');
+  const storageKey = `fieldverify-chat-${userId}`;
+  const [conversationId, setConversationId] = useState<string | undefined>(() => localStorage.getItem(storageKey) ?? undefined);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const send = async (content = input) => { const message = content.trim(); if (!message || busy) return; setInput(''); setError(''); setMessages((current) => [...current, { sender: 'USER', content: message, timestamp: new Date().toISOString() }]); setBusy(true); try { const data = await request('/ai/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message, conversationId, testId }) }); setConversationId(data.conversationId); if (data.conversationId) localStorage.setItem(storageKey, data.conversationId); setMessages((current) => [...current, { sender: 'ASSISTANT', content: data.message, timestamp: new Date().toISOString() }]); } catch (reason) { setError((reason as Error).message); } finally { setBusy(false); } };
+  const clear = () => { setMessages([]); setConversationId(undefined); localStorage.removeItem(storageKey); };
+  const suggestions = isSupervisor ? supervisorSuggestions : operatorSuggestions;
+  return <div className="chat-overlay"><div className="chat-panel"><div className="chat-header"><div className="chat-title"><div className="chat-avatar"><Bot size={19} /></div><div><strong>{isSupervisor ? 'Supervisor Copilot' : 'Field Assistant'}</strong><small>{isSupervisor ? 'Authorized oversight assistant' : 'Field workflow assistant'}</small></div></div><div className="chat-tools"><button title="Clear conversation" onClick={clear}><RotateCcw size={16} /></button><button title="Close assistant" onClick={onClose}><X size={18} /></button></div></div><div className="chat-safety"><ShieldCheck size={14} /> Responses use only your authorized FieldVerify context.</div><div className="chat-messages">{messages.map((message, index) => <div className={`chat-message ${message.sender.toLowerCase()}`} key={`${message.timestamp}-${index}`}><div className="message-icon">{message.sender === 'USER' ? <UserRound size={14} /> : <Bot size={14} />}</div><div><p>{message.content}</p><small>{new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small></div></div>)}{busy && <div className="chat-message assistant"><div className="message-icon"><Bot size={14} /></div><div className="typing"><LoaderCircle size={15} /> Thinking with authorized data...</div></div>}{error && <div className="chat-error">{error}</div>}</div><div className="chat-suggestions">{suggestions.map((suggestion) => <button key={suggestion} onClick={() => send(suggestion)}>{suggestion}</button>)}</div>{testId && <button className="record-prompt" onClick={() => send(isSupervisor ? 'Summarize this record and explain any audit concerns.' : 'Explain this record and its current status.')}>Ask about {testId}<ChevronDown size={14} /></button>}<form className="chat-compose" onSubmit={(event) => { event.preventDefault(); send(); }}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask FieldVerify..." /><button className="primary" disabled={busy || !input.trim()} title="Send message"><Send size={16} /></button></form></div></div>;
+}
+
+export function ChatLauncher({ role, onOpen }: { role: Role; onOpen: () => void }) { return <button className="chat-launcher" onClick={onOpen}><MessageCircle size={18} /><span>{role === 'SUPERVISOR' ? 'Supervisor Copilot' : 'Field Assistant'}</span></button>; }

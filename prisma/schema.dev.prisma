@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../server/node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String       @id @default(cuid())
+  operatorId String      @unique
+  name      String
+  role      String       @default("FIELD_OPERATOR")
+  passwordHash String
+  isActive  Boolean      @default(true)
+  tests     TestRecord[]
+  sessions  Session[]
+  auditLogs AuditLog[]
+  verificationExceptions VerificationException[]
+  conversations Conversation[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @default(now()) @updatedAt
+}
+
+model TestRecord {
+  id                 String   @id @default(cuid())
+  testId             String   @unique
+  operatorId         String
+  testType           String
+  sampleReference    String
+  result             String
+  confidence         Float
+  analysisData       String
+  imagePath          String
+  imageHash          String
+  timestamp          DateTime
+  latitude           Float
+  longitude          Float
+  locationSource     String
+  digitalSignature   String
+  verificationStatus String   @default("UNVERIFIED")
+  aiAnalysis         String?
+  aiConfidence       Float?
+  aiConsistency      String?
+  aiReviewRecommended Boolean  @default(false)
+  aiExplanation      String?
+  aiModel            String?
+  aiAnalyzedAt       DateTime?
+  verifiedBy        String?
+  verifiedAt        DateTime?
+  reviewStatus       String   @default("PENDING")
+  reviewedBy         String?
+  reviewedAt         DateTime?
+  reviewComment      String?
+  notes              String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  operator           User     @relation(fields: [operatorId], references: [operatorId])
+  auditEvents        AuditEvent[]
+  exceptions         VerificationException[]
+  @@index([operatorId])
+  @@index([timestamp])
+  @@index([result])
+}
+
+model AuditEvent {
+  id        String     @id @default(cuid())
+  event     String
+  timestamp DateTime   @default(now())
+  operator  String
+  testId    String
+  record    TestRecord @relation(fields: [testId], references: [testId])
+  @@index([testId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  eventType String
+  userId    String
+  testId    String?
+  timestamp DateTime @default(now())
+  metadata  String   @default("{}")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([eventType])
+  @@index([userId])
+  @@index([testId])
+  @@index([timestamp])
+}
+
+model VerificationException {
+  id             String   @id @default(cuid())
+  testId         String
+  createdBy      String
+  reason         String
+  description    String   @default("")
+  priority       String   @default("LOW")
+  status         String   @default("OPEN")
+  resolution     String?
+  resolvedBy     String?
+  resolvedAt     DateTime?
+  createdAt      DateTime @default(now())
+  record         TestRecord @relation(fields: [testId], references: [testId], onDelete: Cascade)
+  creator        User     @relation(fields: [createdBy], references: [operatorId])
+  @@index([testId])
+  @@index([status])
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  userId    String
+  role      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  sender         String
+  content        String
+  timestamp      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  @@index([conversationId, timestamp])
+}

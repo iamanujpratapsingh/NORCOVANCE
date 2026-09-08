@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: fieldverify
+    runtime: node
+    rootDir: .
+    buildCommand: npm run render:build
+    startCommand: npm run render:start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fieldverify-db
+          property: connectionString
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash-lite
+      - key: SIGNING_PRIVATE_KEY
+        sync: false
+      - key: SIGNING_PUBLIC_KEY
+        sync: false
+      - key: VITE_API_URL
+        sync: false
+
+databases:
+  - name: fieldverify-db
+    databaseName: fieldverify
+    user: fieldverify
+    plan: free
